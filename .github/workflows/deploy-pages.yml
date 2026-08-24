@@ -25,43 +25,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build static site
-        run: |
-          mkdir -p _site
-          cp index.html favicon.svg .nojekyll _site/
-          cp -R assets _site/assets
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('_site/index.html')
-          s = p.read_text()
-          s = s.replace(
-              '.brand-mark span { transform: rotate(4deg); font-family: var(--display); font-size: .94rem; font-weight: 1000; letter-spacing: -.06em; }',
-              '.brand-mark span { transform: rotate(4deg); font-family: var(--display); font-size: .94rem; font-weight: 1000; letter-spacing: -.06em; }\\n.brand-logo { width: 54px; height: 54px; display: block; object-fit: contain; flex: 0 0 auto; }'
-          )
-          s = s.replace(
-              '  .brand-mark { width: 46px; height: 46px; }',
-              '  .brand-mark { width: 46px; height: 46px; }\\n  .brand-logo { width: 46px; height: 46px; }'
-          )
-          s = s.replace(
-              '<a class="brand" href="#home" aria-label="Stand Up Guys home"><span class="brand-mark" aria-hidden="true"><span>SUG</span></span><span class="brand-type"><strong>Stand Up Guys</strong><small>Youth Mentor</small></span></a>',
-              '<a class="brand" href="#home" aria-label="Stand Up Guys home"><img class="brand-logo" src="assets/stand-up-guys-logo.png" alt="Stand Up Guys logo"><span class="brand-type"><strong>Stand Up Guys</strong><small>Youth Mentor</small></span></a>',
-              1
-          )
-          s = s.replace(
-              '<a class="brand footer-brand" href="#home"><span class="brand-mark" aria-hidden="true"><span>SUG</span></span><span class="brand-type"><strong>Stand Up Guys</strong><small>Youth Mentor</small></span></a>',
-              '<a class="brand footer-brand" href="#home"><img class="brand-logo" src="assets/stand-up-guys-logo.png" alt="Stand Up Guys logo"><span class="brand-type"><strong>Stand Up Guys</strong><small>Youth Mentor</small></span></a>',
-              1
-          )
-          p.write_text(s)
-          PY
-
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: .
 
       - name: Deploy to GitHub Pages
         id: deployment
