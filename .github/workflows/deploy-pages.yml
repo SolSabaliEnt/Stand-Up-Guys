@@ -25,13 +25,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build text-only branding
+        run: |
+          mkdir -p _site
+          cp -R . _site/
+          rm -rf _site/.git _site/.github
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('_site/index.html')
+          s = p.read_text()
+          s = s.replace('<span class="brand-mark" aria-hidden="true"><span>SUG</span></span>', '')
+          s = s.replace('<img class="brand-logo" src="assets/stand-up-guys-logo.png" alt="Stand Up Guys logo">', '')
+          p.write_text(s)
+          PY
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment
