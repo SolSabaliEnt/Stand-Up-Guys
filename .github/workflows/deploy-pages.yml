@@ -1,4 +1,4 @@
-name: Deploy Stand Up Guys to Pages
+name: Sync official logo into site
 
 on:
   push:
@@ -7,91 +7,73 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  sync-logo:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
 
-      - name: Build site with responsive logo
+      - name: Insert logo into index.html
         run: |
-          mkdir -p _site
-          cp -R . _site/
-          rm -rf _site/.git _site/.github
           python - <<'PY'
           from pathlib import Path
-          import re
 
-          p = Path('_site/index.html')
+          p = Path('index.html')
           s = p.read_text()
 
-          logo_css = r'''
+          css_marker = '/* Stand Up Guys official logo sizing */'
+          logo_css = '''
 /* Stand Up Guys official logo sizing */
 .brand-logo {
   display: block;
   width: auto;
-  height: 68px;
-  max-width: 112px;
+  height: 70px;
+  max-width: 140px;
   object-fit: contain;
   object-position: center;
   flex: 0 0 auto;
 }
 .footer-brand .brand-logo {
-  height: 118px;
-  max-width: 190px;
+  height: 135px;
+  max-width: 260px;
 }
 @media (max-width: 760px) {
   .brand-logo {
     height: 56px;
-    max-width: 92px;
+    max-width: 112px;
   }
   .footer-brand .brand-logo {
-    height: 96px;
-    max-width: 155px;
+    height: 108px;
+    max-width: 210px;
   }
 }
 '''
-
-          if '/* Stand Up Guys official logo sizing */' not in s:
+          if css_marker not in s:
               s = s.replace('</style>', logo_css + '\n</style>', 1)
 
-          brand_pattern = re.compile(r'(<a\s+class="brand(?:\s+footer-brand)?"[^>]*>).*?(</a>)', re.S)
-          occurrence = 0
+          header_old = '<a class="brand" href="#home" aria-label="Stand Up Guys home"><span class="brand-mark" aria-hidden="true"><span>SUG</span></span><span class="brand-type"><strong>Stand Up Guys</strong><small>Youth Mentor</small></span></a>'
+          header_new = '<a class="brand" href="#home" aria-label="Stand Up Guys home"><img class="brand-logo" src="assets/stand-up-guys-logo.png" alt="Stand Up Guys Youth Mentor logo"></a>'
+          footer_old = '<a class="brand footer-brand" href="#home"><span class="brand-mark" aria-hidden="true"><span>SUG</span></span><span class="brand-type"><strong>Stand Up Guys</strong><small>Youth Mentor</small></span></a>'
+          footer_new = '<a class="brand footer-brand" href="#home"><img class="brand-logo" src="assets/stand-up-guys-logo.png" alt="Stand Up Guys Youth Mentor logo"></a>'
 
-          def replace_brand(match):
-              global occurrence
-              occurrence += 1
-              opening = match.group(1)
-              closing = match.group(2)
-              is_footer = 'footer-brand' in opening
-              img_class = 'brand-logo'
-              img = '<img class="{}" src="assets/stand-up-guys-logo.png" alt="Stand Up Guys Youth Mentor logo">'.format(img_class)
-              return opening + img + closing
-
-          s = brand_pattern.sub(replace_brand, s)
+          s = s.replace(header_old, header_new, 1)
+          s = s.replace(footer_old, footer_new, 1)
           p.write_text(s)
           PY
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit site update if needed
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "Logo already synced."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Render official Stand Up Guys logo"
+          git push origin HEAD:main
